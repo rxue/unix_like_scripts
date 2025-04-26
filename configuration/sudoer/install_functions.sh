@@ -75,25 +75,26 @@ install_eclipse () {
 _add_to_gnome_main_menu () {
   local app_name=$1
   local desktop_file=/usr/share/applications/${app_name}.desktop
-  cp templates/app.desktop.template $desktop_file
+  cp configuration/sudoer/templates/app.desktop.template $desktop_file
   sed -i "s/#{app_name}/"${app_name}"/g" $desktop_file
   sed -i "s%#{executable_file_path}%"${2}"%g" $desktop_file
   sed -i "s%#{icon_path}%"${3}"%g" $desktop_file
 }
-_download_intellij_idea () {
-  local option=${1}
-  binary_file_name=`curl -s https://www.jetbrains.com/intellij-repository/releases |grep ideaIC.zip --max-count 1 |grep -oP 'ideaIC-.*-sources.jar"' |sed 's/-sources.jar"//g'`
-  tar_file_name=${binary_file_name}.tar.gz
-  direct_download_link=https://download.jetbrains.com/idea/${tar_file_name}
-  echo "Download IntelliJ Idea from link: "${direct_download_link}
-  wget $direct_download_link
-  intellij_dir=/opt/intellij
-  mkdir $intellij_dir
-  tar ${option} -xvzf $tar_file_name -C ${intellij_dir}/
+_get_intellij_idea_latest_download_url () {
+  curl --silent https://data.services.jetbrains.com/products?code=IIC |jq -r '.[0].releases[0].downloads.linux.link'
 }
-install_intellij_idea () {
-  _download_intellij_idea --remove-files
-  local idea_bin_dir=/opt/intellij/$(sudo tar -xzvf ideaIC-2023.3.tar.gz -C /opt/intellij/ |head -n 1)bin
+_download_latest_intellij_idea () {
+  local download_url=`_get_intellij_idea_latest_download_url`
+  echo "Download IntelliJ Idea from link: "$download_url
+  curl -LO $download_url
+}
+install_latest_intellij_idea () {
+  _download_latest_intellij_idea
+  local program_dir=$(basename `_get_intellij_idea_latest_download_url` |sed 's/.tar.gz//')
+  echo "file name is "$program_dir
+  local intellij_dir=/opt/intellij
+  tar -xvzf ${program_dir}.tar.gz -C ${intellij_dir}/
+  local idea_bin_dir=/opt/intellij/${program_dir}/bin
   ln -fs ${idea_bin_dir}/idea.sh /usr/bin/intellij.idea
   _add_to_gnome_main_menu intellij.idea ${idea_bin_dir}/idea.sh ${idea_bin_dir}/idea.png
 }
