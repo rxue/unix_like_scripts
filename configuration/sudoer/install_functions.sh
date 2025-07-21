@@ -42,18 +42,6 @@ install_vim () {
   cat sudoer/templates/vimrc.local |tee /etc/vim/vimrc.local
 }
 
-# Install Google Chrome browser
-install_chrome () {
-  wget https://dl.google.com/linux/direct/google-chrome-stable_current_amd64.deb
-  dpkg -i google-chrome-stable_current_amd64.deb
-  if [ $? -ne 0 ]; then
-    # Reference: man 8 apt-get
-    apt-get --assume-yes install -f
-  fi
-  dpkg -i google-chrome-stable_current_amd64.deb
-  rm google-chrome-stable_current_amd64.deb
-}
-
 # configure_python3 () {
 #  apt-get install python3-pip
 #  # venv is a subset of virtualenv, so use virtualenv. Reference: https://stackoverflow.com/questions/41573587/what-is-the-difference-between-venv-pyvenv-pyenv-virtualenv-virtualenvwrappe
