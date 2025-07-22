@@ -1,32 +1,6 @@
 # Install and configure vim
 # Reference: http://vim.wikia.com/wiki/Indenting_source_code
-_basename_without_extension () {
-  local file_fullname=$(basename ${1})
-  local result=""
-  if [[ ${file_fullname} == *.*.* ]]; then
-    result=`basename "${file_fullname%.*.*}"`
-  elif [[ ${file_fullname} == *.* ]]; then
-    result=`basename "${file_fullname%.*}"`
-  fi
-  echo ${result}
-}
-_extract_tar_2 () {
-  local download_link=${1}
-  local target_dir=${2}
-  wget ${download_link}
-  local tar_file_name=`basename $download_link`
-  local tar_options=${3}
-  tar -$tar_options $tar_file_name -C $target_dir
-  rm $tar_file_name
-}
 
-install_maven () {
-  local download_link=https://dlcdn.apache.org/maven/maven-3/3.9.0/binaries/apache-maven-3.9.0-bin.tar.gz
-  _extract_tar_2 ${download_link} /opt/ xvzf
-  local extracted_package_name=`_basename_without_extension ${download_link}`
-  ln -fs /opt/${extracted_package_name%-bin}/bin/mvn /usr/local/bin/mvn
-
-}
 install_nodejs () {
   install_2_dir=/opt/nodejs
   mkdir $install_2_dir
