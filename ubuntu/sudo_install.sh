@@ -4,4 +4,6 @@ apt-get --assume-yes install curl
 echo "Install and then configure vim"
 apt-get --assume-yes install vim
 cat configuration/sudoer/templates/vimrc.local |tee /etc/vim/vimrc.local
-sudo_install_chrome
+install_chrome
+apt-get --assume-yes install openjdk-21-jdk
+install_latest_intellij_idea
