@@ -37,10 +37,6 @@ install_nodejs () {
   ln -fs ${install_2_dir}/${extracted_package_name}/bin/npm /usr/local/bin/npm
   ln -fs ${install_2_dir}/${extracted_package_name}/bin/npx /usr/local/bin/npx
 }
-install_vim () {
-  apt-get --assume-yes install vim
-  cat sudoer/templates/vimrc.local |tee /etc/vim/vimrc.local
-}
 
 # configure_python3 () {
 #  apt-get install python3-pip
@@ -49,43 +45,6 @@ install_vim () {
 #}
 # FAQ: 
 # * How Maven compile Java source code? Answer: Maven compile source code by finding using the - javac - command in the OS
-
-install_eclipse () {
-  direct_download_link=$(python3 python/get_eclipse_package_direct_download_link.py)
-  wget ${direct_download_link}
-  tar_file_name=$(python3 python/utils.py get_str ${direct_download_link} ".*.tar.gz" "/")
-  tar -xvzf ${tar_file_name} -C /opt/
-  rm ${tar_file_name}
-  # Refer to http://stackoverflow.com/questions/37864572/using-different-location-for-eclipses-p2-file
-  ln -fs /opt/eclipse/eclipse /usr/bin/eclipse
-  python3 python/add_to_gnome_main_menu.py eclipse /opt/eclipse/eclipse /opt/eclipse/icon.xpm
-}
-_add_to_gnome_main_menu () {
-  local app_name=$1
-  local desktop_file=/usr/share/applications/${app_name}.desktop
-  cp configuration/sudoer/templates/app.desktop.template $desktop_file
-  sed -i "s/#{app_name}/"${app_name}"/g" $desktop_file
-  sed -i "s%#{executable_file_path}%"${2}"%g" $desktop_file
-  sed -i "s%#{icon_path}%"${3}"%g" $desktop_file
-}
-_get_intellij_idea_latest_download_url () {
-  curl --silent https://data.services.jetbrains.com/products?code=IIC |jq -r '.[0].releases[0].downloads.linux.link'
-}
-_download_latest_intellij_idea () {
-  local download_url=`_get_intellij_idea_latest_download_url`
-  echo "Download IntelliJ Idea from link: "$download_url
-  curl -LO $download_url
-}
-install_latest_intellij_idea () {
-  _download_latest_intellij_idea
-  local program_dir=$(basename `_get_intellij_idea_latest_download_url` |sed 's/.tar.gz//')
-  echo "file name is "$program_dir
-  local intellij_dir=/opt/intellij
-  tar -xvzf ${program_dir}.tar.gz -C ${intellij_dir}/
-  local idea_bin_dir=/opt/intellij/${program_dir}/bin
-  ln -fs ${idea_bin_dir}/idea.sh /usr/bin/intellij.idea
-  _add_to_gnome_main_menu intellij.idea ${idea_bin_dir}/idea.sh ${idea_bin_dir}/idea.png
-}
 
 install_system_monitors () {
   apt-get install strace
