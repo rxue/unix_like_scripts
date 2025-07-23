@@ -6,6 +6,3 @@ remove () {
  [[ -n "${bin_dir}" ]] && rm -rf $bin_dir
 }
 
-remove_latest_intellij_idea () {
-  remove intellij.idea /opt/intellij
-}
