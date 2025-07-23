@@ -1,7 +1,7 @@
 _add_to_gnome_main_menu () {
   local app_name=$1
   local desktop_file=/usr/share/applications/${app_name}.desktop
-  cp configuration/sudoer/templates/app.desktop.template $desktop_file
+  cp ubuntu/templates/app.desktop.template $desktop_file
   sed -i "s/#{app_name}/"${app_name}"/g" $desktop_file
   sed -i "s%#{executable_file_path}%"${2}"%g" $desktop_file
   sed -i "s%#{icon_path}%"${3}"%g" $desktop_file
