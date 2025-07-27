@@ -1,7 +1,8 @@
 [Desktop Entry]
 Comment=
 Terminal=false
-Name=#{app_name}
+Name=#{name}
 Exec=#{executable_file_path}
 Type=Application
-Icon=#{icon_path}
+Icon=#{executable}
+StartupWMClass=#{startupWmClass}
