@@ -18,6 +18,8 @@ def find_dividend_transactions(df: pd.DataFrame) -> pd.DataFrame:
         DataFrame with only rows where Laji == 'Arvopaperit'.
     """
     return df[df["Selitys"].str.lower() == "arvopaperit"]
+def find_service_charge_transactions(df: pd.DataFrame) -> pd.DataFrame:
+    return df[df["Selitys"].str.lower() == "palvelumaksu"]
 
 
 def sum_field(df: pd.DataFrame, field: str) -> float:
@@ -48,6 +50,10 @@ def main():
     print(stock_tradings)
     print("Total dividend:")
     print(sum_field(stock_tradings, "Määrä EUROA"))
+    print("Total service charges")
+    sc = find_service_charge_transactions(df)
+    print(sum_field(sc, "Määrä EUROA"))
+
 
 
 if __name__ == "__main__":
