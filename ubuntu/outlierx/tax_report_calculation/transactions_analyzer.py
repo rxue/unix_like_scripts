@@ -157,7 +157,8 @@ def main():
     print(mrn_trs_dfs)
     mr_trs = parse_transactions(mrn_trs_dfs)
     print(mr_trs)
-
+    mrn_profit = calculate_fifo_profit(mr_trs)
+    print(f"profit {mrn_profit}")
 
 
 if __name__ == "__main__":
