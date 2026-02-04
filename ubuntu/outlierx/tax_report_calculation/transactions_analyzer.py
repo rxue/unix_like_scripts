@@ -17,6 +17,7 @@ class Transaction:
     symbol: str
     type: str
     share_amount: int
+    total_amount: float
 
 
 def parse_transactions(df: pd.DataFrame) -> list[Transaction]:
@@ -40,15 +41,54 @@ def parse_transactions(df: pd.DataFrame) -> list[Transaction]:
             symbol = match.group(2)
             share_amount = int(match.group(3))
             transaction_type = "BUY" if type_code == "O" else "SELL"
+            total_amount = float(row["Määrä EUROA"].replace(",", "."))
 
             transactions.append(Transaction(
                 date=row["Kirjauspäivä"],
                 symbol=symbol,
                 type=transaction_type,
-                share_amount=share_amount
+                share_amount=share_amount,
+                total_amount=abs(total_amount)
             ))
 
     return transactions
+
+
+def calculate_fifo_profit(transactions: list[Transaction]) -> float:
+    """Calculate profit from transactions using FIFO method.
+
+    Args:
+        transactions: List of Transaction objects sorted by date.
+
+    Returns:
+        Total profit (positive) or loss (negative).
+    """
+    buy_queue: list[tuple[int, float]] = []  # (shares, cost_per_share)
+    total_profit = 0.0
+
+    for tx in transactions:
+        if tx.type == "BUY":
+            cost_per_share = tx.total_amount / tx.share_amount
+            buy_queue.append((tx.share_amount, cost_per_share))
+        elif tx.type == "SELL":
+            sell_price_per_share = tx.total_amount / tx.share_amount
+            shares_to_sell = tx.share_amount
+
+            while shares_to_sell > 0 and buy_queue:
+                buy_shares, buy_cost = buy_queue[0]
+
+                if buy_shares <= shares_to_sell:
+                    profit = buy_shares * (sell_price_per_share - buy_cost)
+                    total_profit += profit
+                    shares_to_sell -= buy_shares
+                    buy_queue.pop(0)
+                else:
+                    profit = shares_to_sell * (sell_price_per_share - buy_cost)
+                    total_profit += profit
+                    buy_queue[0] = (buy_shares - shares_to_sell, buy_cost)
+                    shares_to_sell = 0
+
+    return total_profit
 
 
 def find_dividend_transactions(df: pd.DataFrame) -> pd.DataFrame:
