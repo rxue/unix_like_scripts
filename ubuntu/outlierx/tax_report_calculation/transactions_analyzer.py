@@ -2,11 +2,53 @@
 """Analyze transaction data from DataFrames."""
 
 import argparse
+import re
+from dataclasses import dataclass
 from pyexpat.errors import messages
 
 import pandas as pd
 
 from csv_to_dataframe import read_csvs_to_dataframe
+
+
+@dataclass
+class Transaction:
+    date: str
+    symbol: str
+    type: str
+    share_amount: int
+
+
+def parse_transactions(df: pd.DataFrame) -> list[Transaction]:
+    """Parse buy/sell transactions into Transaction objects.
+
+    Args:
+        df: DataFrame with 'Kirjauspäivä' and 'Viesti' columns.
+            Viesti format: "O:SYMBOL /amount" or "M:SYMBOL /amount"
+
+    Returns:
+        List of Transaction objects.
+    """
+    transactions = []
+    pattern = r"^([OM]):(\w+)\s*/(\d+)"
+
+    for _, row in df.iterrows():
+        viesti = row["Viesti"].strip()
+        match = re.match(pattern, viesti)
+        if match:
+            type_code = match.group(1)
+            symbol = match.group(2)
+            share_amount = int(match.group(3))
+            transaction_type = "BUY" if type_code == "O" else "SELL"
+
+            transactions.append(Transaction(
+                date=row["Kirjauspäivä"],
+                symbol=symbol,
+                type=transaction_type,
+                share_amount=share_amount
+            ))
+
+    return transactions
 
 
 def find_dividend_transactions(df: pd.DataFrame) -> pd.DataFrame:
@@ -71,8 +113,10 @@ def main():
     sc = find_service_charge_transactions(df)
     print(sc)
     print(sum_field(sc, "Määrä EUROA"))
-    mrn_trs = find_transactions_by_ticker_symbol(df, "MRNA")
-    print(mrn_trs)
+    mrn_trs_dfs = find_transactions_by_ticker_symbol(df, "MRNA")
+    print(mrn_trs_dfs)
+    mr_trs = parse_transactions(mrn_trs_dfs)
+    print(mr_trs)
 
 
 
