@@ -1,8 +1,6 @@
 #!/usr/bin/env python3
 """Unit tests for transactions_analyzer module."""
 
-import pytest
-
 from transactions_analyzer import Transaction, calculate_fifo_profit
 
 
@@ -12,8 +10,7 @@ def test_simple_profit():
         Transaction(date="2024-01-01", symbol="TEST", type="BUY", share_amount=10, total_amount=100.0),
         Transaction(date="2024-01-02", symbol="TEST", type="SELL", share_amount=10, total_amount=150.0),
     ]
-    profit = calculate_fifo_profit(transactions)
-    assert profit == pytest.approx(50.0)
+    assert calculate_fifo_profit(transactions) == 50.0
 
 
 def test_simple_loss():
@@ -22,8 +19,7 @@ def test_simple_loss():
         Transaction(date="2024-01-01", symbol="TEST", type="BUY", share_amount=10, total_amount=100.0),
         Transaction(date="2024-01-02", symbol="TEST", type="SELL", share_amount=10, total_amount=80.0),
     ]
-    profit = calculate_fifo_profit(transactions)
-    assert profit == pytest.approx(-20.0)
+    assert calculate_fifo_profit(transactions) == -20.0
 
 
 def test_fifo_order():
@@ -34,8 +30,7 @@ def test_fifo_order():
         Transaction(date="2024-01-03", symbol="TEST", type="SELL", share_amount=10, total_amount=150.0),
     ]
     # Sell 10 shares at $15, cost was $10 (first batch) = $50 profit
-    profit = calculate_fifo_profit(transactions)
-    assert profit == pytest.approx(50.0)
+    assert calculate_fifo_profit(transactions) == 50.0
 
 
 def test_partial_sell_from_single_buy():
@@ -44,8 +39,7 @@ def test_partial_sell_from_single_buy():
         Transaction(date="2024-01-01", symbol="TEST", type="BUY", share_amount=20, total_amount=200.0),
         Transaction(date="2024-01-02", symbol="TEST", type="SELL", share_amount=10, total_amount=150.0),
     ]
-    profit = calculate_fifo_profit(transactions)
-    assert profit == pytest.approx(50.0)
+    assert calculate_fifo_profit(transactions) == 50.0
 
 
 def test_sell_across_multiple_buys():
@@ -58,15 +52,13 @@ def test_sell_across_multiple_buys():
     # Sell 5 from first batch: 5 * ($25 - $10) = $75
     # Sell 5 from second batch: 5 * ($25 - $20) = $25
     # Total profit = $100
-    profit = calculate_fifo_profit(transactions)
-    assert profit == pytest.approx(100.0)
+    assert calculate_fifo_profit(transactions) == 100.0
 
 
 def test_no_transactions():
     """Empty transaction list returns zero profit."""
     transactions = []
-    profit = calculate_fifo_profit(transactions)
-    assert profit == pytest.approx(0.0)
+    assert calculate_fifo_profit(transactions) == 0.0
 
 
 def test_only_buys():
@@ -75,5 +67,4 @@ def test_only_buys():
         Transaction(date="2024-01-01", symbol="TEST", type="BUY", share_amount=10, total_amount=100.0),
         Transaction(date="2024-01-02", symbol="TEST", type="BUY", share_amount=10, total_amount=200.0),
     ]
-    profit = calculate_fifo_profit(transactions)
-    assert profit == pytest.approx(0.0)
+    assert calculate_fifo_profit(transactions) == 0.0
