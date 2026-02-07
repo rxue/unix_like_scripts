@@ -11,9 +11,9 @@ import pandas as pd
 from csv_to_dataframe import read_csvs_to_dataframe
 from transaction_filters import (
     find_dividend_payments,
-    find_service_charges,
     find_by_ticker_symbol,
-    find_stock_tradings
+    find_stock_tradings,
+    find_expenses,
 )
 
 
@@ -98,19 +98,71 @@ def calculate_profit_in_fifo(transactions: list[Transaction]) -> float:
     return total_profit_cents / 100
 
 
-def sum_money(df: pd.DataFrame, field: str) -> float:
-    """Sum values of a field in a DataFrame using cents for precision.
+def sum_money(df: pd.DataFrame) -> float:
+    """Sum money values in a DataFrame using cents for precision.
 
     Args:
-        df: DataFrame containing the field.
-        field: Column name to sum.
+        df: DataFrame containing 'Määrä EUROA' column.
 
     Returns:
-        Sum of the field values.
+        Sum of the money values.
     """
-    values = df[field].str.replace(",", ".").astype(float)
+    values = df["Määrä EUROA"].str.replace(",", ".").astype(float)
     cents = (values * 100).round().astype(int)
     return cents.sum() / 100
+
+
+def calculate_capital_gains(df: pd.DataFrame) -> float:
+    """Calculate total capital gains from all stock trading transactions.
+
+    Args:
+        df: DataFrame containing transaction data.
+
+    Returns:
+        Total capital gains using FIFO method.
+    """
+    stock_tradings_df = find_stock_tradings(df)
+
+    # Extract unique stock symbols from Viesti field (format: O:SYMBOL or M:SYMBOL)
+    pattern = r"^[OM]:(\w+)"
+    symbols = set()
+    for viesti in stock_tradings_df["Viesti"].str.strip():
+        match = re.match(pattern, viesti)
+        if match:
+            symbols.add(match.group(1))
+    # Calculate profit for each symbol and sum
+    total_capital_gains_cents = 0
+    for symbol in symbols:
+        symbol_df = find_by_ticker_symbol(df, symbol)
+        transactions = parse_transactions(symbol_df)
+        profit = calculate_profit_in_fifo(transactions)
+        total_capital_gains_cents += round(profit * 100)
+    return total_capital_gains_cents / 100
+
+
+def report(df: pd.DataFrame) -> set[tuple[str, float]]:
+    """Generate a tax report with business income and expenses.
+
+    Args:
+        df: DataFrame containing transaction data.
+
+    Returns:
+        Set of tuples with (category_name, value).
+    """
+    # Business income: positive amounts excluding stock trading (Laji != 700)
+    income_df = find_stock_tradings(df)
+    capital_gains = calculate_capital_gains(income_df)
+    dividend_payments = find_dividend_payments(df)
+    business_income = sum_money(pd.concat([dividend_payments])) + capital_gains
+
+    # Business expenses: negative amounts excluding stock trading (Laji != 700)
+    expenses_df = find_expenses(df)
+    business_expenses = abs(sum_money(expenses_df))
+
+    return {
+        ("business income", business_income),
+        ("business expenses", business_expenses),
+    }
 
 
 def main():
@@ -121,26 +173,7 @@ def main():
     args = parser.parse_args()
 
     df = read_csvs_to_dataframe(args.directory)
-    print(f"SUM: {sum_money(df, "Määrä EUROA")}")
-    stock_tradings = find_dividend_payments(df)
-
-    print(f"Found {len(stock_tradings)} stock trading(s):")
-    print(stock_tradings)
-    print("Total dividend:")
-    print(sum_money(stock_tradings, "Määrä EUROA"))
-    print("Total service charges")
-    sc = find_service_charges(df)
-    print(sc)
-    print(sum_money(sc, "Määrä EUROA"))
-    mrn_trs_dfs = find_by_ticker_symbol(df, "MRNA")
-    print(mrn_trs_dfs)
-    mr_trs = parse_transactions(mrn_trs_dfs)
-    print(mr_trs)
-    mrn_profit = calculate_profit_in_fifo(mr_trs)
-    print(f"profit {mrn_profit}")
-    stock_tradings = find_stock_tradings(df)
-    print(stock_tradings)
-    print(f"Financial asset (book value of stock shares) {sum_money(stock_tradings, "Määrä EUROA")}")
+    print(report(df))
 
 
 if __name__ == "__main__":
