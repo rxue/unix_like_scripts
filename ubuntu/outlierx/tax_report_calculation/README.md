@@ -4,6 +4,7 @@
 Action: my local is `python3.12` => need `sudo apt-get install python3.12-venv`
 
 # Knowledge crunching on tax calculation
+Guide: https://www.vero.fi/yritykset-ja-yhteisot/verot-ja-maksut/osakeyhtio-ja-osuuskunta/veroilmoitus/
 ## transaction type knowledge
 * Laji=700 - selitys: NOSTO. e.g. payment of buying stocks
 ### Laji=710 - Selity=ARVOPAPERIT
