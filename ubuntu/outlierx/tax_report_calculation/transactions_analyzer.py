@@ -59,7 +59,7 @@ def parse_transactions(df: pd.DataFrame) -> list[Transaction]:
     return transactions
 
 
-def calculate_fifo_profit(transactions: list[Transaction]) -> float:
+def calculate_profit_in_fifo(transactions: list[Transaction]) -> float:
     """Calculate profit from transactions using FIFO method.
 
     Args:
@@ -68,32 +68,33 @@ def calculate_fifo_profit(transactions: list[Transaction]) -> float:
     Returns:
         Total profit (positive) or loss (negative).
     """
-    buy_queue: list[tuple[int, float]] = []  # (shares, cost_per_share)
-    total_profit = 0.0
+    buy_queue: list[tuple[int, int]] = []  # (shares, total_cost_in_cents)
+    total_profit_cents = 0
 
     for tx in transactions:
+        total_cents = round(tx.total_amount * 100)
         if tx.type == "BUY":
-            cost_per_share = tx.total_amount / tx.share_amount
-            buy_queue.append((tx.share_amount, cost_per_share))
+            buy_queue.append((tx.share_amount, total_cents))
         elif tx.type == "SELL":
-            sell_price_per_share = tx.total_amount / tx.share_amount
+            sell_total_cents = total_cents
             shares_to_sell = tx.share_amount
 
             while shares_to_sell > 0 and buy_queue:
-                buy_shares, buy_cost = buy_queue[0]
+                buy_shares, buy_total_cents = buy_queue[0]
 
                 if buy_shares <= shares_to_sell:
-                    profit = buy_shares * (sell_price_per_share - buy_cost)
-                    total_profit += profit
+                    sell_portion_cents = sell_total_cents * buy_shares // shares_to_sell
+                    total_profit_cents += sell_portion_cents - buy_total_cents
+                    sell_total_cents -= sell_portion_cents
                     shares_to_sell -= buy_shares
                     buy_queue.pop(0)
                 else:
-                    profit = shares_to_sell * (sell_price_per_share - buy_cost)
-                    total_profit += profit
-                    buy_queue[0] = (buy_shares - shares_to_sell, buy_cost)
+                    buy_portion_cents = buy_total_cents * shares_to_sell // buy_shares
+                    total_profit_cents += sell_total_cents - buy_portion_cents
+                    buy_queue[0] = (buy_shares - shares_to_sell, buy_total_cents - buy_portion_cents)
                     shares_to_sell = 0
 
-    return total_profit
+    return total_profit_cents / 100
 
 
 def sum_field(df: pd.DataFrame, field: str) -> float:
@@ -132,7 +133,7 @@ def main():
     print(mrn_trs_dfs)
     mr_trs = parse_transactions(mrn_trs_dfs)
     print(mr_trs)
-    mrn_profit = calculate_fifo_profit(mr_trs)
+    mrn_profit = calculate_profit_in_fifo(mr_trs)
     print(f"profit {mrn_profit}")
 
 

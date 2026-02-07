@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Unit tests for transactions_analyzer module."""
 
-from transactions_analyzer import Transaction, calculate_fifo_profit
+from transactions_analyzer import Transaction, calculate_profit_in_fifo
 
 
 def test_calculate_fifo_profit_base():
@@ -10,17 +10,17 @@ def test_calculate_fifo_profit_base():
         Transaction(date="2024-01-01", symbol="TEST", type="BUY", share_amount=10, total_amount=100.0),
         Transaction(date="2024-01-02", symbol="TEST", type="SELL", share_amount=10, total_amount=150.0),
     ]
-    assert calculate_fifo_profit(transactions) == 50.0
+    assert calculate_profit_in_fifo(transactions) == 50.0
 
 
-def test_calculate_fifo_order():
+def test_calculate_fifo_profit_order():
     transactions = [
         Transaction(date="2024-01-13", symbol="TEST", type="BUY", share_amount=20, total_amount=574.68),
         Transaction(date="2024-01-13", symbol="TEST", type="BUY", share_amount=20, total_amount=575.96),
         Transaction(date="2024-01-30", symbol="TEST", type="SELL", share_amount=20, total_amount=612),
     ]
     # 612-574.68 = $37.32 profit
-    assert calculate_fifo_profit(transactions) == 37.32
+    assert calculate_profit_in_fifo(transactions) == 37.32
 
 
 def test_partial_sell_from_single_buy():
@@ -29,7 +29,7 @@ def test_partial_sell_from_single_buy():
         Transaction(date="2024-01-01", symbol="TEST", type="BUY", share_amount=20, total_amount=200.0),
         Transaction(date="2024-01-02", symbol="TEST", type="SELL", share_amount=10, total_amount=150.0),
     ]
-    assert calculate_fifo_profit(transactions) == 50.0
+    assert calculate_profit_in_fifo(transactions) == 50.0
 
 
 def test_sell_across_multiple_buys():
@@ -42,13 +42,13 @@ def test_sell_across_multiple_buys():
     # Sell 5 from first batch: 5 * ($25 - $10) = $75
     # Sell 5 from second batch: 5 * ($25 - $20) = $25
     # Total profit = $100
-    assert calculate_fifo_profit(transactions) == 100.0
+    assert calculate_profit_in_fifo(transactions) == 100.0
 
 
 def test_no_transactions():
     """Empty transaction list returns zero profit."""
     transactions = []
-    assert calculate_fifo_profit(transactions) == 0.0
+    assert calculate_profit_in_fifo(transactions) == 0.0
 
 
 def test_only_buys():
@@ -57,4 +57,4 @@ def test_only_buys():
         Transaction(date="2024-01-01", symbol="TEST", type="BUY", share_amount=10, total_amount=100.0),
         Transaction(date="2024-01-02", symbol="TEST", type="BUY", share_amount=10, total_amount=200.0),
     ]
-    assert calculate_fifo_profit(transactions) == 0.0
+    assert calculate_profit_in_fifo(transactions) == 0.0
