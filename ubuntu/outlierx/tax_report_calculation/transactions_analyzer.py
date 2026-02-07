@@ -13,6 +13,7 @@ from transaction_filters import (
     find_dividend_payments,
     find_service_charges,
     find_by_ticker_symbol,
+    find_stock_tradings
 )
 
 
@@ -97,8 +98,8 @@ def calculate_profit_in_fifo(transactions: list[Transaction]) -> float:
     return total_profit_cents / 100
 
 
-def sum_field(df: pd.DataFrame, field: str) -> float:
-    """Sum values of a field in a DataFrame.
+def sum_money(df: pd.DataFrame, field: str) -> float:
+    """Sum values of a field in a DataFrame using cents for precision.
 
     Args:
         df: DataFrame containing the field.
@@ -108,7 +109,8 @@ def sum_field(df: pd.DataFrame, field: str) -> float:
         Sum of the field values.
     """
     values = df[field].str.replace(",", ".").astype(float)
-    return values.sum()
+    cents = (values * 100).round().astype(int)
+    return cents.sum() / 100
 
 
 def main():
@@ -119,22 +121,26 @@ def main():
     args = parser.parse_args()
 
     df = read_csvs_to_dataframe(args.directory)
+    print(f"SUM: {sum_money(df, "Määrä EUROA")}")
     stock_tradings = find_dividend_payments(df)
 
     print(f"Found {len(stock_tradings)} stock trading(s):")
     print(stock_tradings)
     print("Total dividend:")
-    print(sum_field(stock_tradings, "Määrä EUROA"))
+    print(sum_money(stock_tradings, "Määrä EUROA"))
     print("Total service charges")
     sc = find_service_charges(df)
     print(sc)
-    print(sum_field(sc, "Määrä EUROA"))
+    print(sum_money(sc, "Määrä EUROA"))
     mrn_trs_dfs = find_by_ticker_symbol(df, "MRNA")
     print(mrn_trs_dfs)
     mr_trs = parse_transactions(mrn_trs_dfs)
     print(mr_trs)
     mrn_profit = calculate_profit_in_fifo(mr_trs)
     print(f"profit {mrn_profit}")
+    stock_tradings = find_stock_tradings(df)
+    print(stock_tradings)
+    print(f"Financial asset (book value of stock shares) {sum_money(stock_tradings, "Määrä EUROA")}")
 
 
 if __name__ == "__main__":

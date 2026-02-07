@@ -40,6 +40,18 @@ def find_by_ticker_symbol(df: pd.DataFrame, ticker_symbol: str) -> pd.DataFrame:
     return df[category_code_filter & message_filter]
 
 
+def find_stock_tradings(df: pd.DataFrame) -> pd.DataFrame:
+    """Find stock trading transactions (buy/sell), excluding dividends.
+
+    Args:
+        df: DataFrame containing 'Laji' column.
+
+    Returns:
+        DataFrame with only stock trading rows (Laji == 700).
+    """
+    return df[df["Laji"] == 700]
+
+
 def find_expenses(df: pd.DataFrame) -> pd.DataFrame:
     """Find expense rows, i.e. Määrä EUROA is negative and Laji is not 700.
 
