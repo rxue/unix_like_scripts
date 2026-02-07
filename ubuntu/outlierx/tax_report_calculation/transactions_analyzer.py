@@ -26,6 +26,12 @@ class Transaction:
     total_amount: float
 
 
+@dataclass
+class Report:
+    business_income: float
+    business_expense: float
+
+
 def parse_transactions(df: pd.DataFrame) -> list[Transaction]:
     """Parse buy/sell transactions into Transaction objects.
 
@@ -140,14 +146,14 @@ def calculate_capital_gains(df: pd.DataFrame) -> float:
     return total_capital_gains_cents / 100
 
 
-def report(df: pd.DataFrame) -> set[tuple[str, float]]:
+def report(df: pd.DataFrame) -> Report:
     """Generate a tax report with business income and expenses.
 
     Args:
         df: DataFrame containing transaction data.
 
     Returns:
-        Set of tuples with (category_name, value).
+        Report object with business income and expenses.
     """
     # Business income: positive amounts excluding stock trading (Laji != 700)
     income_df = find_stock_tradings(df)
@@ -157,12 +163,12 @@ def report(df: pd.DataFrame) -> set[tuple[str, float]]:
 
     # Business expenses: negative amounts excluding stock trading (Laji != 700)
     expenses_df = find_expenses(df)
-    business_expenses = abs(sum_money(expenses_df))
+    business_expense = abs(sum_money(expenses_df))
 
-    return {
-        ("business income", business_income),
-        ("business expenses", business_expenses),
-    }
+    return Report(
+        business_income=business_income,
+        business_expense=business_expense,
+    )
 
 
 def main():
