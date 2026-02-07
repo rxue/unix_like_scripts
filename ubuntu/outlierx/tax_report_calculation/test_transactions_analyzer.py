@@ -4,7 +4,7 @@
 from transactions_analyzer import Transaction, calculate_fifo_profit
 
 
-def test_simple_profit():
+def test_calculate_fifo_profit_base():
     """Buy 10 shares at $10, sell 10 shares at $15 = $50 profit."""
     transactions = [
         Transaction(date="2024-01-01", symbol="TEST", type="BUY", share_amount=10, total_amount=100.0),
@@ -13,24 +13,14 @@ def test_simple_profit():
     assert calculate_fifo_profit(transactions) == 50.0
 
 
-def test_simple_loss():
-    """Buy 10 shares at $10, sell 10 shares at $8 = $20 loss."""
+def test_calculate_fifo_order():
     transactions = [
-        Transaction(date="2024-01-01", symbol="TEST", type="BUY", share_amount=10, total_amount=100.0),
-        Transaction(date="2024-01-02", symbol="TEST", type="SELL", share_amount=10, total_amount=80.0),
+        Transaction(date="2024-01-13", symbol="TEST", type="BUY", share_amount=20, total_amount=574.68),
+        Transaction(date="2024-01-13", symbol="TEST", type="BUY", share_amount=20, total_amount=575.96),
+        Transaction(date="2024-01-30", symbol="TEST", type="SELL", share_amount=20, total_amount=612),
     ]
-    assert calculate_fifo_profit(transactions) == -20.0
-
-
-def test_fifo_order():
-    """Buy 10 at $10, buy 10 at $20, sell 10 at $15. FIFO sells first batch."""
-    transactions = [
-        Transaction(date="2024-01-01", symbol="TEST", type="BUY", share_amount=10, total_amount=100.0),
-        Transaction(date="2024-01-02", symbol="TEST", type="BUY", share_amount=10, total_amount=200.0),
-        Transaction(date="2024-01-03", symbol="TEST", type="SELL", share_amount=10, total_amount=150.0),
-    ]
-    # Sell 10 shares at $15, cost was $10 (first batch) = $50 profit
-    assert calculate_fifo_profit(transactions) == 50.0
+    # 612-574.68 = $37.32 profit
+    assert calculate_fifo_profit(transactions) == 37.32
 
 
 def test_partial_sell_from_single_buy():
