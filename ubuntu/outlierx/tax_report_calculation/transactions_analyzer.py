@@ -30,6 +30,13 @@ class Transaction:
 class Report:
     business_income: float
     business_expense: float
+    cash: float
+
+
+@dataclass
+class FIFOElement:
+    shares: int
+    total_cost: float
 
 
 def parse_transactions(df: pd.DataFrame) -> list[Transaction]:
@@ -66,14 +73,16 @@ def parse_transactions(df: pd.DataFrame) -> list[Transaction]:
     return transactions
 
 
-def calculate_profit_in_fifo(transactions: list[Transaction]) -> float:
+def calculate_profit_in_fifo(transactions: list[Transaction]) -> tuple[float, list[FIFOElement]]:
     """Calculate profit from transactions using FIFO method.
 
     Args:
         transactions: List of Transaction objects sorted by date.
 
     Returns:
-        Total profit (positive) or loss (negative).
+        Tuple of (profit, remaining_queue) where:
+        - profit: Total profit (positive) or loss (negative)
+        - remaining_queue: List of FIFOElement for unsold shares
     """
     buy_queue: list[tuple[int, int]] = []  # (shares, total_cost_in_cents)
     total_profit_cents = 0
@@ -101,7 +110,36 @@ def calculate_profit_in_fifo(transactions: list[Transaction]) -> float:
                     buy_queue[0] = (buy_shares - shares_to_sell, buy_total_cents - buy_portion_cents)
                     shares_to_sell = 0
 
-    return total_profit_cents / 100
+    remaining_queue = [FIFOElement(shares=shares, total_cost=cost_in_cents / 100) for shares, cost_in_cents in buy_queue]
+    return total_profit_cents / 100, remaining_queue
+
+
+def calculate_capital_gains(df: pd.DataFrame) -> float:
+    """Calculate total capital gains from all stock trading transactions.
+
+    Args:
+        df: DataFrame containing transaction data.
+
+    Returns:
+        Total capital gains with FIFO.
+    """
+    stock_tradings_df = find_stock_tradings(df)
+
+    # Extract unique stock symbols from Viesti field (format: O:SYMBOL or M:SYMBOL)
+    pattern = r"^[OM]:(\w+)"
+    symbols = set()
+    for viesti in stock_tradings_df["Viesti"].str.strip():
+        match = re.match(pattern, viesti)
+        if match:
+            symbols.add(match.group(1))
+    # Calculate profit for each symbol and sum
+    total_capital_gains_cents = 0
+    for symbol in symbols:
+        symbol_df = find_by_ticker_symbol(df, symbol)
+        transactions = parse_transactions(symbol_df)
+        profit, _ = calculate_profit_in_fifo(transactions)
+        total_capital_gains_cents += round(profit * 100)
+    return total_capital_gains_cents / 100
 
 
 def sum_money(df: pd.DataFrame) -> float:
@@ -118,35 +156,7 @@ def sum_money(df: pd.DataFrame) -> float:
     return cents.sum() / 100
 
 
-def calculate_capital_gains(df: pd.DataFrame) -> float:
-    """Calculate total capital gains from all stock trading transactions.
-
-    Args:
-        df: DataFrame containing transaction data.
-
-    Returns:
-        Total capital gains using FIFO method.
-    """
-    stock_tradings_df = find_stock_tradings(df)
-
-    # Extract unique stock symbols from Viesti field (format: O:SYMBOL or M:SYMBOL)
-    pattern = r"^[OM]:(\w+)"
-    symbols = set()
-    for viesti in stock_tradings_df["Viesti"].str.strip():
-        match = re.match(pattern, viesti)
-        if match:
-            symbols.add(match.group(1))
-    # Calculate profit for each symbol and sum
-    total_capital_gains_cents = 0
-    for symbol in symbols:
-        symbol_df = find_by_ticker_symbol(df, symbol)
-        transactions = parse_transactions(symbol_df)
-        profit = calculate_profit_in_fifo(transactions)
-        total_capital_gains_cents += round(profit * 100)
-    return total_capital_gains_cents / 100
-
-
-def report(df: pd.DataFrame) -> Report:
+def tax_report(df: pd.DataFrame) -> Report:
     """Generate a tax report with business income and expenses.
 
     Args:
@@ -168,6 +178,7 @@ def report(df: pd.DataFrame) -> Report:
     return Report(
         business_income=business_income,
         business_expense=business_expense,
+        cash=sum_money(df)
     )
 
 
@@ -179,7 +190,7 @@ def main():
     args = parser.parse_args()
 
     df = read_csvs_to_dataframe(args.directory)
-    print(report(df))
+    print(tax_report(df))
 
 
 if __name__ == "__main__":

@@ -2,6 +2,7 @@
 """Filter functions for transaction DataFrames."""
 
 import argparse
+import re
 
 import pandas as pd
 
@@ -52,6 +53,32 @@ def find_stock_tradings(df: pd.DataFrame) -> pd.DataFrame:
     return df[df["Laji"] == 700]
 
 
+def find_stock_tradings_by_symbol(df: pd.DataFrame) -> list[pd.DataFrame]:
+    """Find stock trading transactions grouped by ticker symbol.
+
+    Args:
+        df: DataFrame containing 'Laji' and 'Viesti' columns.
+
+    Returns:
+        List of DataFrames, each containing transactions for one ticker symbol.
+    """
+    pattern = r"^[OM]:(\w+)"
+    symbol_to_row_index_list_map: dict[str, list[int]] = {}
+
+    for idx, row in df.iterrows():
+        if row["Laji"] != 700:
+            continue
+        viesti = row["Viesti"].strip()
+        match = re.match(pattern, viesti)
+        if match:
+            symbol = match.group(1)
+            if symbol not in symbol_to_row_index_list_map:
+                symbol_to_row_index_list_map[symbol] = []
+            symbol_to_row_index_list_map[symbol].append(idx)
+
+    return [df.loc[indices] for indices in symbol_to_row_index_list_map.values()]
+
+
 def find_expenses(df: pd.DataFrame) -> pd.DataFrame:
     """Find expense rows, i.e. Määrä EUROA is negative and Laji is not 700.
 
@@ -73,7 +100,10 @@ def main():
     args = parser.parse_args()
 
     df = read_csvs_to_dataframe(args.directory)
-    print(find_expenses(df))
+    stock_tradings_list = find_stock_tradings_by_symbol(df)
+    for tradings_by_symbol in stock_tradings_list:
+        print(tradings_by_symbol)
+        print("================================================")
 
 
 if __name__ == "__main__":
