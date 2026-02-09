@@ -20,7 +20,6 @@ from transaction_filters import (
 @dataclass
 class Lot:
     date: str
-    symbol: str
     type: str
     share_amount: int
     total_amount: float
@@ -57,14 +56,12 @@ def parse_transactions(df: pd.DataFrame) -> list[Lot]:
         match = re.match(pattern, viesti)
         if match:
             type_code = match.group(1)
-            symbol = match.group(2)
             share_amount = int(match.group(3))
             transaction_type = "BUY" if type_code == "O" else "SELL"
             total_amount = float(row["Määrä EUROA"].replace(",", "."))
 
             transactions.append(Lot(
                 date=row["Kirjauspäivä"],
-                symbol=symbol,
                 type=transaction_type,
                 share_amount=share_amount,
                 total_amount=abs(total_amount)
