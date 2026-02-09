@@ -18,7 +18,7 @@ from transaction_filters import (
 
 
 @dataclass
-class Transaction:
+class Lot:
     date: str
     symbol: str
     type: str
@@ -39,7 +39,7 @@ class FIFOElement:
     total_cost: float
 
 
-def parse_transactions(df: pd.DataFrame) -> list[Transaction]:
+def parse_transactions(df: pd.DataFrame) -> list[Lot]:
     """Parse buy/sell transactions into Transaction objects.
 
     Args:
@@ -62,7 +62,7 @@ def parse_transactions(df: pd.DataFrame) -> list[Transaction]:
             transaction_type = "BUY" if type_code == "O" else "SELL"
             total_amount = float(row["Määrä EUROA"].replace(",", "."))
 
-            transactions.append(Transaction(
+            transactions.append(Lot(
                 date=row["Kirjauspäivä"],
                 symbol=symbol,
                 type=transaction_type,
@@ -73,7 +73,7 @@ def parse_transactions(df: pd.DataFrame) -> list[Transaction]:
     return transactions
 
 
-def calculate_profit_in_fifo(transactions: list[Transaction]) -> tuple[float, list[FIFOElement]]:
+def stock_trading_profit_in_fifo(transactions: list[Lot]) -> tuple[float, list[FIFOElement]]:
     """Calculate profit from transactions using FIFO method.
 
     Args:
@@ -137,7 +137,7 @@ def calculate_capital_gains(df: pd.DataFrame) -> float:
     for symbol in symbols:
         symbol_df = find_by_ticker_symbol(df, symbol)
         transactions = parse_transactions(symbol_df)
-        profit, _ = calculate_profit_in_fifo(transactions)
+        profit, _ = stock_trading_profit_in_fifo(transactions)
         total_capital_gains_cents += round(profit * 100)
     return total_capital_gains_cents / 100
 
