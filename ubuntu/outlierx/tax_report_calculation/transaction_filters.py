@@ -100,6 +100,8 @@ def main():
     args = parser.parse_args()
 
     df = read_csvs_to_dataframe(args.directory)
+    print(df)
+    print("********************************************************")
     stock_tradings_list = find_stock_tradings_by_symbol(df)
     for tradings_by_symbol in stock_tradings_list:
         print(tradings_by_symbol)

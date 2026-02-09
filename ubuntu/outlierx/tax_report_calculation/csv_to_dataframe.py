@@ -22,7 +22,7 @@ def read_csvs_to_dataframe(directory: str) -> pd.DataFrame:
     if not dir_path.is_dir():
         raise ValueError(f"'{directory}' is not a valid directory")
 
-    dfs = [pd.read_csv(f, encoding="latin-1", sep=";") for f in dir_path.glob("*.csv")]
+    dfs = [pd.read_csv(f, encoding="latin-1", sep=";") for f in sorted(dir_path.glob("*.csv"))]
 
     if not dfs:
         return pd.DataFrame()
