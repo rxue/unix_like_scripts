@@ -25,22 +25,6 @@ def find_service_charges(df: pd.DataFrame) -> pd.DataFrame:
     return df[df["Selitys"].str.lower() == "palvelumaksu"]
 
 
-def find_by_ticker_symbol(df: pd.DataFrame, ticker_symbol: str) -> pd.DataFrame:
-    """Find transactions where Laji is 700 and Viesti starts with O:<ticker> or M:<ticker>.
-
-    Args:
-        df: DataFrame containing 'Laji' and 'Viesti' columns.
-        ticker_symbol: Stock ticker symbol to filter by.
-
-    Returns:
-        DataFrame with matching transactions.
-    """
-    category_code_filter = df["Laji"] == 700
-    viesti_trimmed = df["Viesti"].str.strip()
-    message_filter = viesti_trimmed.str.startswith(f"O:{ticker_symbol}") | viesti_trimmed.str.startswith(f"M:{ticker_symbol}")
-    return df[category_code_filter & message_filter]
-
-
 def find_stock_tradings(df: pd.DataFrame) -> pd.DataFrame:
     """Find stock trading transactions (buy/sell), excluding dividends.
 
@@ -53,14 +37,14 @@ def find_stock_tradings(df: pd.DataFrame) -> pd.DataFrame:
     return df[df["Laji"] == 700]
 
 
-def find_stock_tradings_by_symbol(df: pd.DataFrame) -> list[pd.DataFrame]:
+def find_all_stock_tradings_by_symbol(df: pd.DataFrame) -> dict[str, pd.DataFrame]:
     """Find stock trading transactions grouped by ticker symbol.
 
     Args:
         df: DataFrame containing 'Laji' and 'Viesti' columns.
 
     Returns:
-        List of DataFrames, each containing transactions for one ticker symbol.
+        Dict with stock symbol as key and DataFrame of transactions as value.
     """
     pattern = r"^[OM]:(\w+)"
     symbol_to_row_index_list_map: dict[str, list[int]] = {}
@@ -76,7 +60,7 @@ def find_stock_tradings_by_symbol(df: pd.DataFrame) -> list[pd.DataFrame]:
                 symbol_to_row_index_list_map[symbol] = []
             symbol_to_row_index_list_map[symbol].append(idx)
 
-    return [df.loc[indices] for indices in symbol_to_row_index_list_map.values()]
+    return {symbol: df.loc[indices] for symbol, indices in symbol_to_row_index_list_map.items()}
 
 
 def find_expenses(df: pd.DataFrame) -> pd.DataFrame:
@@ -102,9 +86,10 @@ def main():
     df = read_csvs_to_dataframe(args.directory)
     print(df)
     print("********************************************************")
-    stock_tradings_list = find_stock_tradings_by_symbol(df)
-    for tradings_by_symbol in stock_tradings_list:
-        print(tradings_by_symbol)
+    stock_tradings_dict = find_all_stock_tradings_by_symbol(df)
+    for symbol, symbol_df in stock_tradings_dict.items():
+        print(symbol)
+        print(symbol_df)
         print("================================================")
 
 

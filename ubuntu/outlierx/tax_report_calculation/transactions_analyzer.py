@@ -4,15 +4,13 @@
 import argparse
 import re
 from dataclasses import dataclass
-from pyexpat.errors import messages
 
 import pandas as pd
 
 from csv_to_dataframe import read_csvs_to_dataframe
 from transaction_filters import (
     find_dividend_payments,
-    find_by_ticker_symbol,
-    find_stock_tradings,
+    find_all_stock_tradings_by_symbol,
     find_expenses,
 )
 
@@ -30,9 +28,10 @@ class Report:
     business_income: float
     business_expense: float
     cash: float
+    financial_asset: float
 
 
-def parse_transactions(df: pd.DataFrame) -> list[Lot]:
+def transfer_transactions_to_lots(df: pd.DataFrame) -> list[Lot]:
     """Parse buy/sell transactions into Transaction objects.
 
     Args:
@@ -43,11 +42,10 @@ def parse_transactions(df: pd.DataFrame) -> list[Lot]:
         List of Transaction objects.
     """
     transactions = []
-    pattern = r"^([OM]):(\w+)\s*/(\d+)"
 
     for _, row in df.iterrows():
         viesti = row["Viesti"].strip()
-        match = re.match(pattern, viesti)
+        match = _match_trading(viesti)
         if match:
             type_code = match.group(1)
             share_amount = int(match.group(3))
@@ -62,6 +60,11 @@ def parse_transactions(df: pd.DataFrame) -> list[Lot]:
             ))
 
     return transactions
+
+
+def _match_trading(viesti: str) -> re.Match[str] | None:
+    pattern = r"^([OM]):(\w+)(?:\s+\w+)?\s*/(\d+)"
+    return re.match(pattern, viesti)
 
 
 def stock_trading_profit_in_fifo(transactions: list[Lot]) -> (float, list[Lot]):
@@ -103,35 +106,6 @@ def stock_trading_profit_in_fifo(transactions: list[Lot]) -> (float, list[Lot]):
     remaining_lots = [Lot(date=date, type="BUY", share_amount=shares, total_amount=cost_in_cents / 100) for date, shares, cost_in_cents in buy_queue]
     return total_profit_cents / 100, remaining_lots
 
-
-def calculate_capital_gains(df: pd.DataFrame) -> float:
-    """Calculate total capital gains from all stock trading transactions.
-
-    Args:
-        df: DataFrame containing transaction data.
-
-    Returns:
-        Total capital gains with FIFO.
-    """
-    stock_tradings_df = find_stock_tradings(df)
-
-    # Extract unique stock symbols from Viesti field (format: O:SYMBOL or M:SYMBOL)
-    pattern = r"^[OM]:(\w+)"
-    symbols = set()
-    for viesti in stock_tradings_df["Viesti"].str.strip():
-        match = re.match(pattern, viesti)
-        if match:
-            symbols.add(match.group(1))
-    # Calculate profit for each symbol and sum
-    total_capital_gains_cents = 0
-    for symbol in symbols:
-        symbol_df = find_by_ticker_symbol(df, symbol)
-        transactions = parse_transactions(symbol_df)
-        profit, _ = stock_trading_profit_in_fifo(transactions)
-        total_capital_gains_cents += round(profit * 100)
-    return total_capital_gains_cents / 100
-
-
 def sum_money(df: pd.DataFrame) -> float:
     """Sum money values in a DataFrame using cents for precision.
 
@@ -155,20 +129,40 @@ def tax_report(df: pd.DataFrame) -> Report:
     Returns:
         Report object with business income and expenses.
     """
-    # Business income: positive amounts excluding stock trading (Laji != 700)
-    income_df = find_stock_tradings(df)
-    capital_gains = calculate_capital_gains(income_df)
-    dividend_payments = find_dividend_payments(df)
-    business_income = sum_money(pd.concat([dividend_payments])) + capital_gains
+    def stock_trading_profit_and_book_values_by_symbol(all_tradings: dict[str, pd.DataFrame]) -> dict[str, tuple[float, float]]:
+        """Calculate capital gains and book values of each Stock.
+
+        Args:
+            all_tradings: all the stock trading transactions
+
+        Returns:
+            map whose key is the stock symbol, and the value is the (profit, book_value)
+        """
+        result = {}
+        for symbol, symbol_df in all_tradings.items():
+            lots = transfer_transactions_to_lots(symbol_df)
+            profit, remaining_lots = stock_trading_profit_in_fifo(lots)
+            book_value = sum(lot.total_amount for lot in remaining_lots)
+            result[symbol] = (profit, book_value)
+        return result
+
+    all_tradings_by_symbol = find_all_stock_tradings_by_symbol(df)
+    trading_profit_and_book_values = stock_trading_profit_and_book_values_by_symbol(all_tradings_by_symbol)
+    total_trading_profit = sum(profit for profit, _ in trading_profit_and_book_values.values())
+    dividend_payments_df = find_dividend_payments(df)
+    business_income = sum_money(pd.concat([dividend_payments_df])) + total_trading_profit
 
     # Business expenses: negative amounts excluding stock trading (Laji != 700)
     expenses_df = find_expenses(df)
     business_expense = abs(sum_money(expenses_df))
 
+    total_financial_asset = sum(book_value for _, book_value in trading_profit_and_book_values.values())
+
     return Report(
         business_income=business_income,
         business_expense=business_expense,
-        cash=sum_money(df)
+        cash=sum_money(df),
+        financial_asset=total_financial_asset
     )
 
 
