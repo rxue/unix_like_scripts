@@ -32,12 +32,6 @@ class Report:
     cash: float
 
 
-@dataclass
-class FIFOElement:
-    shares: int
-    total_cost: float
-
-
 def parse_transactions(df: pd.DataFrame) -> list[Lot]:
     """Parse buy/sell transactions into Transaction objects.
 
@@ -70,30 +64,29 @@ def parse_transactions(df: pd.DataFrame) -> list[Lot]:
     return transactions
 
 
-def stock_trading_profit_in_fifo(transactions: list[Lot]) -> tuple[float, list[FIFOElement]]:
+def stock_trading_profit_in_fifo(transactions: list[Lot]) -> (float, list[Lot]):
     """Calculate profit from transactions using FIFO method.
 
     Args:
-        transactions: List of Transaction objects sorted by date.
+        transactions: List of Lot objects sorted by date.
 
     Returns:
-        Tuple of (profit, remaining_queue) where:
-        - profit: Total profit (positive) or loss (negative)
-        - remaining_queue: List of FIFOElement for unsold shares
+        profit: Total profit (positive) or loss (negative)
+        remaining_lots: List of Lot for unsold shares
     """
-    buy_queue: list[tuple[int, int]] = []  # (shares, total_cost_in_cents)
+    buy_queue: list[tuple[str, int, int]] = []  # (date, shares, total_cost_in_cents)
     total_profit_cents = 0
 
     for tx in transactions:
         total_cents = round(tx.total_amount * 100)
         if tx.type == "BUY":
-            buy_queue.append((tx.share_amount, total_cents))
+            buy_queue.append((tx.date, tx.share_amount, total_cents))
         elif tx.type == "SELL":
             sell_total_cents = total_cents
             shares_to_sell = tx.share_amount
 
             while shares_to_sell > 0 and buy_queue:
-                buy_shares, buy_total_cents = buy_queue[0]
+                buy_date, buy_shares, buy_total_cents = buy_queue[0]
 
                 if buy_shares <= shares_to_sell:
                     sell_portion_cents = sell_total_cents * buy_shares // shares_to_sell
@@ -104,11 +97,11 @@ def stock_trading_profit_in_fifo(transactions: list[Lot]) -> tuple[float, list[F
                 else:
                     buy_portion_cents = buy_total_cents * shares_to_sell // buy_shares
                     total_profit_cents += sell_total_cents - buy_portion_cents
-                    buy_queue[0] = (buy_shares - shares_to_sell, buy_total_cents - buy_portion_cents)
+                    buy_queue[0] = (buy_date, buy_shares - shares_to_sell, buy_total_cents - buy_portion_cents)
                     shares_to_sell = 0
 
-    remaining_queue = [FIFOElement(shares=shares, total_cost=cost_in_cents / 100) for shares, cost_in_cents in buy_queue]
-    return total_profit_cents / 100, remaining_queue
+    remaining_lots = [Lot(date=date, type="BUY", share_amount=shares, total_amount=cost_in_cents / 100) for date, shares, cost_in_cents in buy_queue]
+    return total_profit_cents / 100, remaining_lots
 
 
 def calculate_capital_gains(df: pd.DataFrame) -> float:

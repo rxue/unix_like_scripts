@@ -14,13 +14,17 @@ def test_stock_trading_profit_in_fifo_base():
 
 
 def test_stock_trading_profit_in_fifo_order():
+    lot_to_remain = Lot(date="2024-01-13", type="BUY", share_amount=20, total_amount=575.96)
     transactions = [
         Lot(date="2024-01-13", type="BUY", share_amount=20, total_amount=574.68),
-        Lot(date="2024-01-13", type="BUY", share_amount=20, total_amount=575.96),
-        Lot(date="2024-01-30", type="SELL", share_amount=20, total_amount=612),
+        lot_to_remain,
+        (Lot(date="2024-01-30", type="SELL", share_amount=20, total_amount=612)),
     ]
+    profit, remaining_lots = stock_trading_profit_in_fifo(transactions)
     # 612-574.68 = $37.32 profit
-    assert stock_trading_profit_in_fifo(transactions)[0] == 37.32
+    assert profit == 37.32
+    assert remaining_lots == [lot_to_remain]
+
 
 
 def test_partial_sell_from_single_buy():
