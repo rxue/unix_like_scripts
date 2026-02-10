@@ -34,14 +34,13 @@ def find_all_stock_tradings_by_symbol(df: pd.DataFrame) -> dict[str, pd.DataFram
     Returns:
         Dict with stock symbol as key and DataFrame of transactions as value.
     """
-    pattern = r"^[OM]:(\w+)"
     symbol_to_row_index_list_map: dict[str, list[int]] = {}
 
     for idx, row in df.iterrows():
         if row["Laji"] != 700:
             continue
         viesti = row["Viesti"].strip()
-        match = re.match(pattern, viesti)
+        match = match_trading(viesti)
         if match:
             symbol = match.group(1)
             if symbol not in symbol_to_row_index_list_map:
