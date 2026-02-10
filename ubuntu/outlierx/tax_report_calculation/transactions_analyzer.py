@@ -173,6 +173,8 @@ def main():
     args = parser.parse_args()
 
     df = read_csvs_to_dataframe(args.directory)
+    print(df)
+    print("------------Report---------------")
     print(tax_report(df))
 
 

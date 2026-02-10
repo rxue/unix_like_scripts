@@ -63,6 +63,10 @@ def find_all_stock_tradings_by_symbol(df: pd.DataFrame) -> dict[str, pd.DataFram
     return {symbol: df.loc[indices] for symbol, indices in symbol_to_row_index_list_map.items()}
 
 
+def find_cash_infusion(df: pd.DataFrame) -> pd.DataFrame:
+    return df[(df["Laji"] == 710) & (df["Selitys"].str.strip().str.lower() == "tilisiirto")]
+
+
 def find_expenses(df: pd.DataFrame) -> pd.DataFrame:
     """Find expense rows, i.e. Määrä EUROA is negative and Laji is not 700.
 
@@ -84,13 +88,22 @@ def main():
     args = parser.parse_args()
 
     df = read_csvs_to_dataframe(args.directory)
-    print(df)
-    print("********************************************************")
-    stock_tradings_dict = find_all_stock_tradings_by_symbol(df)
-    for symbol, symbol_df in stock_tradings_dict.items():
-        print(symbol)
-        print(symbol_df)
-        print("================================================")
+    print(f"Total rows: {len(df)}")
+    cash_infusions = find_cash_infusion(df)
+    dividend_payments = find_dividend_payments(df)
+    other_expenses = find_expenses(df)
+    stock_tradings_by_symbol = find_all_stock_tradings_by_symbol(df)
+    total_stock_trading_rows = sum(len(symbol_df) for symbol_df in stock_tradings_by_symbol.values())
+    whole_sum = total_stock_trading_rows + len(dividend_payments) + len(other_expenses) + len(cash_infusions)
+    print(whole_sum)
+
+    all_derived_indices = set(cash_infusions.index) | set(dividend_payments.index) | set(other_expenses.index)
+    for symbol_df in stock_tradings_by_symbol.values():
+        all_derived_indices |= set(symbol_df.index)
+    uncategorized = df[~df.index.isin(all_derived_indices)]
+    print(f"Uncategorized rows: {len(uncategorized)}")
+    print(uncategorized)
+    
 
 
 if __name__ == "__main__":
