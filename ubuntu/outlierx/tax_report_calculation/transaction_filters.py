@@ -60,16 +60,18 @@ def find_cash_infusion(df: pd.DataFrame) -> pd.DataFrame:
 
 
 def find_expenses(df: pd.DataFrame) -> pd.DataFrame:
-    """Find expense rows, i.e. Määrä EUROA is negative and Laji is not 700.
+    """Find expense rows, i.e. Määrä EUROA is negative and not a stock trading.
 
     Args:
-        df: DataFrame containing 'Määrä EUROA' and 'Laji' columns.
+        df: DataFrame containing 'Määrä EUROA' and 'Viesti' columns.
 
     Returns:
-        DataFrame with only rows where amount is negative and Laji != 700.
+        DataFrame with only rows where amount is negative and Viesti doesn't match a trading pattern.
     """
     amounts = df["Määrä EUROA"].str.replace(",", ".").astype(float)
-    return df[(amounts < 0) & (df["Laji"] != 700)]
+    negative = df[amounts < 0]
+    is_trading = negative["Viesti"].apply(lambda v: match_trading(v.strip()) is not None)
+    return negative[~is_trading]
 
 
 def main():
@@ -83,24 +85,15 @@ def main():
     print(f"Total rows: {len(df)}")
     cash_infusions = find_cash_infusion(df)
     dividend_payments = find_dividend_payments(df)
-    other_expenses = find_expenses(df)
+    expenses = find_expenses(df)
     stock_tradings_by_symbol = find_all_stock_tradings_by_symbol(df)
-    for s, df in stock_tradings_by_symbol.items():
-        print(s)
-        print(df)
-        print("///////////////////////////")
     total_stock_trading_rows = sum(len(symbol_df) for symbol_df in stock_tradings_by_symbol.values())
     print(f"total stock trading rows is {total_stock_trading_rows}")
-    whole_sum = total_stock_trading_rows + len(dividend_payments) + len(other_expenses) + len(cash_infusions)
-    print(whole_sum)
-
-    all_derived_indices = set(cash_infusions.index) | set(dividend_payments.index) | set(other_expenses.index)
-    for symbol_df in stock_tradings_by_symbol.values():
-        all_derived_indices |= set(symbol_df.index)
-    uncategorized = df[~df.index.isin(all_derived_indices)]
-    print(f"Uncategorized rows: {len(uncategorized)}")
-    print(uncategorized)
-    
+    whole_sum = total_stock_trading_rows + len(dividend_payments) + len(expenses) + len(cash_infusions)
+    if len(df) > 1 and len(df) == whole_sum:
+        print("check sum passed")
+    else:
+        print("WARNING: check sum failed!")
 
 
 if __name__ == "__main__":
