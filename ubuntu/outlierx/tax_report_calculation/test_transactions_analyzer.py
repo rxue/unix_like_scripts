@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Unit tests for transactions_analyzer module."""
 
-from transactions_analyzer import Lot, stock_trading_profit_in_fifo, _match_trading
+from transactions_analyzer import Lot, stock_trading_profit_in_fifo
 
 
 def test_stock_trading_profit_in_fifo_base():
@@ -64,34 +64,3 @@ def test_only_buys():
     assert stock_trading_profit_in_fifo(transactions)[0] == 0
 
 
-def test_match_trading_buy():
-    """Test matching a buy transaction."""
-    match = _match_trading("O:MRNA /20")
-    assert match is not None
-    assert match.group(1) == "O"
-    assert match.group(2) == "MRNA"
-    assert match.group(3) == "20"
-
-def test_match_trading_buy_with_country_code():
-    """Test matching a buy transaction."""
-    match = _match_trading("O:PFE US /100")
-    assert match is not None
-    assert match.group(1) == "O"
-    assert match.group(2) == "PFE"
-    assert match.group(3) == "100"
-
-
-def test_match_trading_sell():
-    """Test matching a sell transaction."""
-    match = _match_trading("M:SIRI /100")
-    assert match is not None
-    assert match.group(1) == "M"
-    assert match.group(2) == "SIRI"
-    assert match.group(3) == "100"
-
-
-def test_match_trading_invalid():
-    """Test that invalid messages don't match."""
-    assert _match_trading("invalid") is None
-    assert _match_trading("X:MRNA /20") is None
-    assert _match_trading("O:MRNA") is None

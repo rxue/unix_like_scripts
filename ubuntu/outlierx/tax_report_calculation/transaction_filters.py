@@ -25,18 +25,6 @@ def find_service_charges(df: pd.DataFrame) -> pd.DataFrame:
     return df[df["Selitys"].str.lower() == "palvelumaksu"]
 
 
-def find_stock_tradings(df: pd.DataFrame) -> pd.DataFrame:
-    """Find stock trading transactions (buy/sell), excluding dividends.
-
-    Args:
-        df: DataFrame containing 'Laji' column.
-
-    Returns:
-        DataFrame with only stock trading rows (Laji == 700).
-    """
-    return df[df["Laji"] == 700]
-
-
 def find_all_stock_tradings_by_symbol(df: pd.DataFrame) -> dict[str, pd.DataFrame]:
     """Find stock trading transactions grouped by ticker symbol.
 
@@ -61,6 +49,11 @@ def find_all_stock_tradings_by_symbol(df: pd.DataFrame) -> dict[str, pd.DataFram
             symbol_to_row_index_list_map[symbol].append(idx)
 
     return {symbol: df.loc[indices] for symbol, indices in symbol_to_row_index_list_map.items()}
+
+
+def match_trading(viesti: str) -> re.Match[str] | None:
+    pattern = r"^([OM]):([\w.]+)(?:\s+\w+)?\s*/(\d+)"
+    return re.match(pattern, viesti)
 
 
 def find_cash_infusion(df: pd.DataFrame) -> pd.DataFrame:
@@ -93,7 +86,12 @@ def main():
     dividend_payments = find_dividend_payments(df)
     other_expenses = find_expenses(df)
     stock_tradings_by_symbol = find_all_stock_tradings_by_symbol(df)
+    for s, df in stock_tradings_by_symbol.items():
+        print(s)
+        print(df)
+        print("///////////////////////////")
     total_stock_trading_rows = sum(len(symbol_df) for symbol_df in stock_tradings_by_symbol.values())
+    print(f"total stock trading rows is {total_stock_trading_rows}")
     whole_sum = total_stock_trading_rows + len(dividend_payments) + len(other_expenses) + len(cash_infusions)
     print(whole_sum)
 

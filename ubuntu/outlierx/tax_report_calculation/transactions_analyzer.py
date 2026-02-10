@@ -12,6 +12,7 @@ from transaction_filters import (
     find_dividend_payments,
     find_all_stock_tradings_by_symbol,
     find_expenses,
+    match_trading,
 )
 
 
@@ -45,7 +46,7 @@ def transfer_transactions_to_lots(df: pd.DataFrame) -> list[Lot]:
 
     for _, row in df.iterrows():
         viesti = row["Viesti"].strip()
-        match = _match_trading(viesti)
+        match = match_trading(viesti)
         if match:
             type_code = match.group(1)
             share_amount = int(match.group(3))
@@ -61,10 +62,6 @@ def transfer_transactions_to_lots(df: pd.DataFrame) -> list[Lot]:
 
     return transactions
 
-
-def _match_trading(viesti: str) -> re.Match[str] | None:
-    pattern = r"^([OM]):(\w+)(?:\s+\w+)?\s*/(\d+)"
-    return re.match(pattern, viesti)
 
 
 def stock_trading_profit_in_fifo(transactions: list[Lot]) -> (int, list[Lot]):
