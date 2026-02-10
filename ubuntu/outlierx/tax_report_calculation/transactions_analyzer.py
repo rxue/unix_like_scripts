@@ -20,7 +20,7 @@ class Lot:
     date: str
     type: str
     share_amount: int
-    total_amount: float
+    money_amount_in_cent: int
 
 
 @dataclass
@@ -50,13 +50,13 @@ def transfer_transactions_to_lots(df: pd.DataFrame) -> list[Lot]:
             type_code = match.group(1)
             share_amount = int(match.group(3))
             transaction_type = "BUY" if type_code == "O" else "SELL"
-            total_amount = float(row["Määrä EUROA"].replace(",", "."))
+            money_amount_in_cent = round(abs(float(row["Määrä EUROA"].replace(",", "."))) * 100)
 
             transactions.append(Lot(
                 date=row["Kirjauspäivä"],
                 type=transaction_type,
                 share_amount=share_amount,
-                total_amount=abs(total_amount)
+                money_amount_in_cent=money_amount_in_cent
             ))
 
     return transactions
@@ -67,7 +67,7 @@ def _match_trading(viesti: str) -> re.Match[str] | None:
     return re.match(pattern, viesti)
 
 
-def stock_trading_profit_in_fifo(transactions: list[Lot]) -> (float, list[Lot]):
+def stock_trading_profit_in_fifo(transactions: list[Lot]) -> (int, list[Lot]):
     """Calculate profit from transactions using FIFO method.
 
     Args:
@@ -81,11 +81,10 @@ def stock_trading_profit_in_fifo(transactions: list[Lot]) -> (float, list[Lot]):
     total_profit_cents = 0
 
     for tx in transactions:
-        total_cents = round(tx.total_amount * 100)
         if tx.type == "BUY":
-            buy_queue.append((tx.date, tx.share_amount, total_cents))
+            buy_queue.append((tx.date, tx.share_amount, tx.money_amount_in_cent))
         elif tx.type == "SELL":
-            sell_total_cents = total_cents
+            sell_total_cents = tx.money_amount_in_cent
             shares_to_sell = tx.share_amount
 
             while shares_to_sell > 0 and buy_queue:
@@ -103,8 +102,8 @@ def stock_trading_profit_in_fifo(transactions: list[Lot]) -> (float, list[Lot]):
                     buy_queue[0] = (buy_date, buy_shares - shares_to_sell, buy_total_cents - buy_portion_cents)
                     shares_to_sell = 0
 
-    remaining_lots = [Lot(date=date, type="BUY", share_amount=shares, total_amount=cost_in_cents / 100) for date, shares, cost_in_cents in buy_queue]
-    return total_profit_cents / 100, remaining_lots
+    remaining_lots = [Lot(date=date, type="BUY", share_amount=shares, money_amount_in_cent=cost_in_cents) for date, shares, cost_in_cents in buy_queue]
+    return total_profit_cents, remaining_lots
 
 def sum_money(df: pd.DataFrame) -> float:
     """Sum money values in a DataFrame using cents for precision.
@@ -129,26 +128,26 @@ def tax_report(df: pd.DataFrame) -> Report:
     Returns:
         Report object with business income and expenses.
     """
-    def stock_trading_profit_and_book_values_by_symbol(all_tradings: dict[str, pd.DataFrame]) -> dict[str, tuple[float, float]]:
+    def stock_trading_profit_and_book_values_by_symbol(all_tradings: dict[str, pd.DataFrame]) -> dict[str, tuple[int, int]]:
         """Calculate capital gains and book values of each Stock.
 
         Args:
             all_tradings: all the stock trading transactions
 
         Returns:
-            map whose key is the stock symbol, and the value is the (profit, book_value)
+            map whose key is the stock symbol, and the value is the (profit_in_cent, book_value_in_cent)
         """
         result = {}
         for symbol, symbol_df in all_tradings.items():
             lots = transfer_transactions_to_lots(symbol_df)
             profit, remaining_lots = stock_trading_profit_in_fifo(lots)
-            book_value = sum(lot.total_amount for lot in remaining_lots)
+            book_value = sum(lot.money_amount_in_cent for lot in remaining_lots)
             result[symbol] = (profit, book_value)
         return result
 
     all_tradings_by_symbol = find_all_stock_tradings_by_symbol(df)
     trading_profit_and_book_values = stock_trading_profit_and_book_values_by_symbol(all_tradings_by_symbol)
-    total_trading_profit = sum(profit for profit, _ in trading_profit_and_book_values.values())
+    total_trading_profit = sum(profit for profit, _ in trading_profit_and_book_values.values()) / 100
     dividend_payments_df = find_dividend_payments(df)
     business_income = sum_money(pd.concat([dividend_payments_df])) + total_trading_profit
 
@@ -156,7 +155,7 @@ def tax_report(df: pd.DataFrame) -> Report:
     expenses_df = find_expenses(df)
     business_expense = abs(sum_money(expenses_df))
 
-    total_financial_asset = sum(book_value for _, book_value in trading_profit_and_book_values.values())
+    total_financial_asset = sum(book_value for _, book_value in trading_profit_and_book_values.values()) / 100
 
     return Report(
         business_income=business_income,
